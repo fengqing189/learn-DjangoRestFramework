@@ -54,6 +54,10 @@ def dispatch(self, request, *args, **kwargs):
     return self.response
 ```
 
+### 请求到来之后，都要执行dispatch方法，dispatch方法根据请求方式不同触发 get/post/put等方法
+
+### 注意：APIView中的dispatch方法有好多好多的功能`
+
 4.`self.initialize_request(request, *args, **kwargs)`做了什么？
 
 ```
@@ -145,6 +149,38 @@ def _authenticate(self):   # 这里的self是request对象
 ```
 
 - 这里的`self.authenticators`就是封装request的那里额外添加的authenticators属性，也就是APIView类的get_authenticators()方法执行之后的结果，就是个列表，要是在自己的LoginView类中定义了`authentication_classes = [认证1的class,认证2的class]`,就会覆盖settings中配置的，如果没有的话，就是用settings中配置的。
+
+- 在我的例子中，我们执行了utils.py中的MyAuthentication类的authenticate方法，这个方法是必须要事项的。**
+
+  ```
+  class MyAuthentication(BaseAuthentication):
+
+      def authenticate(self, request):
+      	'''
+      	用户认证，如果验证成功后返回元组： (用户,用户Token)
+          :param request: 
+          :return: 
+              None,表示跳过该验证；
+                  如果跳过了所有认证，默认用户和Token和使用配置文件进行设置
+                  self._authenticator = None
+                  if api_settings.UNAUTHENTICATED_USER:
+                      self.user = api_settings.UNAUTHENTICATED_USER()
+                  else:
+                      self.user = None
+          
+                  if api_settings.UNAUTHENTICATED_TOKEN:
+                      self.auth = api_settings.UNAUTHENTICATED_TOKEN()
+                  else:
+                      self.auth = None
+              (user,token)表示验证通过并设置用户名和Token；
+              AuthenticationFailed异常
+      	'''
+          token = request.query_params.get('token')
+          obj = models.Userinfo.objects.filter(token=token).first()
+          if obj:
+              return (obj.username,obj)
+          raise APIException
+  ```
+
 - 这里就会调用自己的类来开始做验证，也就是我们在utils.py中的`MyAuthentication`类，注意，如果认证成功，返回值是一个元组，因为在上一步中 `self.user, self.auth = user_auth_tuple`，把认证之后的数据赋值到了request请求对象中了。
-- 到这里，认证的内容基本上就完了，要是想起来再来补充吧。
 
