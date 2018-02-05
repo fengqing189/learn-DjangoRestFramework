@@ -1,0 +1,7 @@
+from django.db import models
+
+class Userinfo(models.Model):
+    username = models.CharField(max_length=32)
+    pwd = models.CharField(max_length=32)
+
+    token = models.CharField(max_length=64, null=True)
