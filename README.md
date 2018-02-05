@@ -1,4 +1,150 @@
 # learn-DjangoRestFramework
-ä»Šå¤©ä¸»è¦å­¦ä¹ äº†DjangoRestFrameè®¤è¯éƒ¨åˆ†çš„æºç æµç¨‹ã€‚
+½ñÌìÖ÷ÒªÑ§Ï°ÁË`DjangoRestFrame`ÈÏÖ¤²¿·ÖµÄÔ´ÂëÁ÷³Ì¡£
 
-# 
+ÔÚÔ´ÂëÖĞ£¬Ö÷ÒªÉæ¼°µ½ÁË3¸öÀà£¬·Ö±ğÊÇ£º
+
+1.`LoginView`Àà;
+
+2.`APIView`Àà
+
+3.`View`Àà
+
+4.`MyAuthentication`Àà(×Ô¼º¶¨ÒåµÄÑéÖ¤¹æÔòÀà)
+
+---
+
+## ÇëÇóÁ÷³Ì
+
+1.ÇëÇóµ½´ïÂ·ÓÉº¯Êı `url` º¯ÊıÖ®ºó,ÒòÎªÊÇCBVÄ£Ê½,ËùÒÔ `url(r'login/',app02_view.LoginView.as_view())`,µ÷ÓÃ`.as_view()`º¯Êı£¬½ø¶øÖ´ĞĞÁË`self.dispatch()`·½·¨£»
+
+2.ÔÚÖ´ĞĞÊÓÍ¼ÀàÖ®Ç°£¬ÏÈÖ´ĞĞ`self.dispatch()` º¯Êı¡£
+
+3.ÔÚdispatch·½·¨ÖĞ£¬Ö÷ÒªÖ´ĞĞÁË`request = self.initialize_request(request, *args, **kwargs)`ÒÔ¼°`self.initial(request, *args, **kwargs)`Á½¾ä»°¡£
+
+```
+def dispatch(self, request, *args, **kwargs):
+    """
+    `.dispatch()` is pretty much the same as Django's regular dispatch,
+    but with extra hooks for startup, finalize, and exception handling.
+    """
+    self.args = args
+    self.kwargs = kwargs
+    # ¶ÔÓÚÔ­Ê¼ÇëÇó£¬×ö·â×°£¬²¢·µ»Ø
+    request = self.initialize_request(request, *args, **kwargs)
+    self.request = request  # ÕâÀïÒÑ¾­ÊÇĞÂµÄÇëÇóÁË
+    self.headers = self.default_response_headers  # deprecate?
+
+    try:
+        self.initial(request, *args, **kwargs)
+
+        # Get the appropriate handler method
+        if request.method.lower() in self.http_method_names:
+            # ÓÃ·´ÉäÀ´ÕÒµ½±¾ÆÚÇëÇóµÄ·½Ê½£¬²¢Ö´ĞĞ£¬Ò²¾ÍÊÇÏÂÃæµÄhandler(request, *args, **kwargs)
+            handler = getattr(self, request.method.lower(),
+                              self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+
+        response = handler(request, *args, **kwargs)
+
+    except Exception as exc:
+        response = self.handle_exception(exc)
+
+    self.response = self.finalize_response(request, response, *args, **kwargs)
+    return self.response
+```
+
+4.`self.initialize_request(request, *args, **kwargs)`×öÁËÊ²Ã´£¿
+
+```
+def initialize_request(self, request, *args, **kwargs):
+    """
+    Returns the initial request object.
+    """
+    parser_context = self.get_parser_context(request)
+
+    # ÕâÀï¿ªÊ¼·â×°request,ĞèÒª½øÈ¥¿´Àï±ß×öÁËÊ²Ã´
+    return Request(
+        request,  # Ô­Ê¼µÄÇëÇó
+        parsers=self.get_parsers(),    # ·µ»ØÒ»¸öÁĞ±í£¬ÔªËØÊÇ¼¸¸ö¶ÔÏó
+        authenticators=self.get_authenticators(),  # ÓÃÓÚÈÏÖ¤µÄÁĞ±í£¬ÔªËØÊÇ¶ÔÏó,ÕâÀïÊÇÑéÖ¤¹æÔòµÄÀàµÄ¶ÔÏó
+        negotiator=self.get_content_negotiator(),
+        parser_context=parser_context
+    )
+```
+
+Õâ¸öº¯Êı£¬°ÑÔ­Ê¼µÄrequestÇëÇó£¬½øĞĞÁËÒ»´Î·â×°£¬Ôö¼ÓÁËÆäËûµÄÊôĞÔ(×¢ÒâÕâÀï¶îÍâĞÂÔöµÄÊôĞÔ£¬ºó±ß»áÓÃµÃµ½)¡£
+
+5.ÔÙ½Ó×ÅÖ´ĞĞ`self.dispatch()`º¯ÊıÖĞµÄ`self.initial(request, *args, **kwargs)`ÕâÀïÖ÷ÒªÊÇ¸ÉÁËÈçÏÂµÄÊÂÇé£º
+
+> ```
+> # 2.ÈÏÖ¤
+> self.perform_authentication(request)
+> # 3.È¨ÏŞ
+> self.check_permissions(request)
+> # 4.ÏŞÖÆ¿Í»§¶Ë·ÃÎÊ´ÎÊı
+> self.check_throttles(request)
+> ```
+
+ÕâÀïÎÒÃÇÖ÷Òª¿´ÈÏÖ¤Õâ¸öº¯Êı:
+
+6.`self.perform_authentication(request)`(Õâ¸ö²ÎÊırequest¾ÍÊÇ·â×°Ö®ºóµÄÀ÷º¦µÄrequest)
+
+```
+def perform_authentication(self, request):
+    """
+    Perform authentication on the incoming request.
+
+    Note that if you override this and simply 'pass', then authentication
+    will instead be performed lazily, the first time either
+    `request.user` or `request.auth` is accessed.
+    """
+    request.user
+```
+
+ÕâÀïµ÷ÓÃÁËRequestÀàµÄuser·½·¨(ÕâÀïµÄuserÊÇÓÃ@property×°ÊÎµÄ£¬Î±×°³ÉÁËÒ»¸öÊôĞÔ )
+
+7.request.user()
+
+```
+@property
+def user(self):
+    """
+    Returns the user associated with the current request, as authenticated
+    by the authentication classes provided to the request.
+    """
+    if not hasattr(self, '_user'):    # self£¬Ö¸µ±Ç°ÇëÇóµÄ¶ÔÏó£¬ÊÇÒÑ¾­±»Request·â×°µÄ¼ÓÇ¿°æÇëÇó£¬
+        with wrap_attributeerrors():
+            self._authenticate()      # ÕâÀï¿ªÊ¼µ÷ÓÃÑéÖ¤º¯ÊıÁË
+    return self._user   # ·µ»ØÓëµ±Ç°ÇëÇóÏà¹ØÁªµÄÓÃ»§
+```
+
+Ö÷ÒªÊÇ¿ªÊ¼Ö´ĞĞ `self._authenticate()` 
+
+8. Ö´ĞĞÈÏÖ¤request¶ÔÏóµÄ`._authenticate()`·½·¨
+
+```
+def _authenticate(self):   # ÕâÀïµÄselfÊÇrequest¶ÔÏó
+    """
+    Attempt to authenticate the request using each authentication instance
+    in turn.
+    """
+    for authenticator in self.authenticators:
+        try:
+            user_auth_tuple = authenticator.authenticate(self)  # ÕâÀï¾ÍÊÇ¿ªÊ¼ÑéÖ¤ÁË
+        except exceptions.APIException:
+            self._not_authenticated()        # Ã»ÓĞÍ¨¹ıÑéÖ¤
+            raise
+
+        if user_auth_tuple is not None:  # Èç¹ûÑéÖ¤Ö®ºó·µ»ØµÄ½á¹û²»Îª¿Õ
+            self._authenticator = authenticator   # authenticatorÖ¸µ±Ç°ÑéÖ¤¹æÔòÀàµÄÊµÀı»¯¶ÔÏó
+            self.user, self.auth = user_auth_tuple  # ÕâÀï¾ÍÊÇ·µ»ØµÄ½á¹û£¬·Åµ½request¶ÔÏóÖĞ£¬
+            return
+
+    self._not_authenticated()
+```
+
+- ÕâÀïµÄ`self.authenticators`¾ÍÊÇ·â×°requestµÄÄÇÀï¶îÍâÌí¼ÓµÄauthenticatorsÊôĞÔ£¬Ò²¾ÍÊÇAPIViewÀàµÄget_authenticators()·½·¨Ö´ĞĞÖ®ºóµÄ½á¹û£¬¾ÍÊÇ¸öÁĞ±í£¬ÒªÊÇÔÚ×Ô¼ºµÄLoginViewÀàÖĞ¶¨ÒåÁË`authentication_classes = [ÈÏÖ¤1µÄclass,ÈÏÖ¤2µÄclass]`,¾Í»á¸²¸ÇsettingsÖĞÅäÖÃµÄ£¬Èç¹ûÃ»ÓĞµÄ»°£¬¾ÍÊÇÓÃsettingsÖĞÅäÖÃµÄ¡£
+- ÕâÀï¾Í»áµ÷ÓÃ×Ô¼ºµÄÀàÀ´¿ªÊ¼×öÑéÖ¤£¬Ò²¾ÍÊÇÎÒÃÇÔÚutils.pyÖĞµÄ`MyAuthentication`Àà£¬×¢Òâ£¬Èç¹ûÈÏÖ¤³É¹¦£¬·µ»ØÖµÊÇÒ»¸öÔª×é£¬ÒòÎªÔÚÉÏÒ»²½ÖĞ `self.user, self.auth = user_auth_tuple`£¬°ÑÈÏÖ¤Ö®ºóµÄÊı¾İ¸³Öµµ½ÁËrequestÇëÇó¶ÔÏóÖĞÁË¡£
+- µ½ÕâÀï£¬ÈÏÖ¤µÄÄÚÈİ»ù±¾ÉÏ¾ÍÍêÁË£¬ÒªÊÇÏëÆğÀ´ÔÙÀ´²¹³ä°É¡£
+
