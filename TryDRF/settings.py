@@ -127,7 +127,7 @@ STATIC_URL = '/static/'
 REST_FRAMEWORK = {
     'UNAUTHENTICATED_USER': None,
     'UNAUTHENTICATED_TOKEN': None,
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'app02.utils.MyAuthentication',
-    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': ['app02.utils.auth.MyAuthentication',],
+    # 'DEFAULT_PERMISSION_CLASSES':[],
+    # 'DEFAULT_THROTTLE_CLASSES':['app02.utils.throttle.MyThrottle',],
 }

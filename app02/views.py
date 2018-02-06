@@ -1,19 +1,20 @@
 from django.shortcuts import render,HttpResponse
-
-from django.views import View
 from rest_framework.views import APIView
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from app02 import models
+from app02.utils.permission import MyPermission1,MyPermission2,MyPermission3
+from app02.utils.throttle import MyThrottle
+from rest_framework import exceptions
 
 
+# 以下是视图类，处理请求相关
 
 class LoginView(APIView):
-    authentication_classes = []
+    authentication_classes = []   # 这里不进行验证，因为是login页面
+    throttle_classes = [MyThrottle,]
     def get(self,request):
         '''
-        接收用户名和密码
+        接收用户名和密码,跟数据库中的进行匹配，验证成功则再数据库中写入token
         :param request:
         :return:
         '''
@@ -26,7 +27,7 @@ class LoginView(APIView):
             ret['code'] = 1001
             ret['msg'] = '用户名密码不匹配'
             return Response(ret)
-        # 创建随机字符串
+        # 创建随机字符串，当做token
         import time
         import hashlib
         ctime = time.time()
@@ -41,11 +42,46 @@ class LoginView(APIView):
         ret['token'] = token
         return Response(ret)
 
-class HostView(APIView):
+    def throttled(self,request, wait):
+        raise MyThrottle(wait)
 
+
+class HostView(APIView):  # 匿名用户、登录用户都可以查看
+    # 认证的类，这里直接使用settings中配置的
+    permission_classes = [MyPermission1,]  # 权限的验证用MyPermission1这个类
+    throttle_classes = []
     def get(self,request,*args,**kwargs):
-        self.dispatch
-        return HttpResponse('....')
+        self.dispatch  # 如果当前类没有dispatch方法，则走APIView类中的dispatch方法。
+        return Response('用户信息列表')
 
     def post(self,response,*args,**kwargs):
         pass
+
+
+class Users(APIView):
+    '''只有登录用户才可以查看'''
+
+    permission_classes = [MyPermission2,]
+    def get(self,request):
+        return Response('用户信息')
+
+# 这里是自定义salary视图类中，要是没认证，保错的提示，参照源码写的。
+from rest_framework.exceptions import APIException
+from rest_framework import status
+class MyNotAuthenticated(APIException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    default_detail = ('Authentication credentials were not provided，没有提供身份验证凭据。.')
+    default_code = 'not_authenticated--没有被认证'
+
+
+class Salary(APIView):
+
+    permission_classes = [MyPermission3,]
+    def get(self,request):
+        return Response('工资信息')
+
+    def permission_denied(self, request, message=None):
+        if request.authenticators and not request.successful_authenticator:   # 如果当前有认证的类
+            raise MyNotAuthenticated()
+        raise exceptions.PermissionDenied(detail='xxxxxxxxxxxx')
+        # 这里原来是detail=message，也可以改写，也可以直接自定义PermissionDenied类，

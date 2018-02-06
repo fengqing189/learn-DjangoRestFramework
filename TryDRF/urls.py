@@ -19,8 +19,9 @@ from django.conf.urls import url
 from app02 import views as app02_view
 
 urlpatterns = [
-
-    url(r'host/',app02_view.HostView.as_view()),
     url(r'login/',app02_view.LoginView.as_view()),
+    url(r'host/',app02_view.HostView.as_view()),
+    url(r'users/',app02_view.Users.as_view()),
+    url(r'salary/',app02_view.Salary.as_view()),
 
 ]
