@@ -130,4 +130,5 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ['app02.utils.auth.MyAuthentication',],
     # 'DEFAULT_PERMISSION_CLASSES':[],
     # 'DEFAULT_THROTTLE_CLASSES':['app02.utils.throttle.MyThrottle',],
+    'DEFAULT_THROTTLE_RATES':{'anon_rate':'5/m','user_rate':'10/m'}
 }

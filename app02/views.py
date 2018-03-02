@@ -77,11 +77,32 @@ class MyNotAuthenticated(APIException):
 class Salary(APIView):
 
     permission_classes = [MyPermission3,]
+    throttle_classes = []
     def get(self,request):
         return Response('工资信息')
 
     def permission_denied(self, request, message=None):
+        '''如果当前请求的permission没有通过，则会调用视图类的当前方法'''
         if request.authenticators and not request.successful_authenticator:   # 如果当前有认证的类
             raise MyNotAuthenticated()
         raise exceptions.PermissionDenied(detail='xxxxxxxxxxxx')
         # 这里原来是detail=message，也可以改写，也可以直接自定义PermissionDenied类，
+
+
+# 首页视图函数，用来测试限流，匿名用户每分钟5次访问，登录用户每分钟10次，
+from app02.utils.throttle import AnonSimpleRateThrottle      # 限制匿名用户的类
+from app02.utils.throttle import UserSimpleRateThrottle       # 限制登录用户的类
+
+class IndexView(APIView):
+
+    throttle_classes = [AnonSimpleRateThrottle,UserSimpleRateThrottle]
+
+    def get(self,request,*args,**kwargs):
+        ret = {
+            'code':100,
+            'msg':'首页的信息'
+        }
+        self.dispatch
+        return Response(ret)
+
+

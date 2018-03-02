@@ -23,5 +23,6 @@ urlpatterns = [
     url(r'host/',app02_view.HostView.as_view()),
     url(r'users/',app02_view.Users.as_view()),
     url(r'salary/',app02_view.Salary.as_view()),
+    url(r'index/',app02_view.IndexView.as_view()),
 
 ]
